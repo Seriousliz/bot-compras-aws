@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bot de Asistencia de Compras</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            width: 90%;
+            max-width: 800px;
+            height: 80vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            background: #4a90e2;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .auth-section {
+            padding: 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .auth-form {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .auth-form input {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .auth-form button {
+            padding: 10px 20px;
+            background: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .auth-form button:hover {
+            background: #357abd;
+        }
+
+        .auth-status {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 12px;
+            border-radius: 10px;
+            max-width: 80%;
+        }
+
+        .message.user {
+            background: #4a90e2;
+            color: white;
+            margin-left: auto;
+            text-align: right;
+        }
+
+        .message.bot {
+            background: #e9ecef;
+            color: #333;
+        }
+
+        .products {
+            margin-top: 10px;
+        }
+
+        .product {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+            margin: 5px 0;
+        }
+
+        .product h4 {
+            color: #4a90e2;
+            margin-bottom: 5px;
+        }
+
+        .product .price {
+            font-weight: bold;
+            color: #28a745;
+        }
+
+        .product a {
+            color: #4a90e2;
+            text-decoration: none;
+            font-size: 12px;
+        }
+
+        .input-area {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .input-area input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 25px;
+            font-size: 14px;
+        }
+
+        .input-area button {
+            padding: 12px 20px;
+            background: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .input-area button:hover {
+            background: #357abd;
+        }
+
+        .audio-btn {
+            background: #dc3545;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .audio-btn.recording {
+            background: #28a745;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .loading {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+        }
+
+        .error {
+            color: #dc3545;
+            text-align: center;
+            padding: 10px;
+            background: #f8d7da;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+
+        .disabled {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛒 Bot de Asistencia de Compras</h1>
+            <p>Tu asistente personal para encontrar electrodomésticos</p>
+        </div>
+
+        <div class="auth-section">
+            <div class="auth-form" id="authForm">
+                <input type="email" id="email" placeholder="Email" required>
+                <input type="password" id="password" placeholder="Contraseña" required>
+                <button onclick="login()">Iniciar Sesión</button>
+                <button onclick="register()">Registrarse</button>
+            </div>
+            <div class="auth-status" id="authStatus">
+                Inicia sesión para comenzar a chatear
+            </div>
+        </div>
+
+        <div class="chat-container" id="chatContainer" style="display: none;">
+            <div class="messages" id="messages">
+                <div class="message bot">
+                    <strong>Bot:</strong> ¡Hola! Soy tu asistente de compras. Te ayudo a encontrar electrodomésticos perfectos para tu hogar. ¿En qué puedo ayudarte hoy?
+                </div>
+            </div>
+
+            <div class="input-area">
+                <input type="text" id="messageInput" placeholder="Escribe tu mensaje..." onkeypress="handleKeyPress(event)">
+                <button onclick="sendMessage()">Enviar</button>
+                <button class="audio-btn" id="audioBtn" onmousedown="startRecording()" onmouseup="stopRecording()" ontouchstart="startRecording()" ontouchend="stopRecording()">
+                    🎤
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuración (reemplazar con valores reales del stack)
+        const CONFIG = {
+            apiEndpoint: 'https://2tttwbrm34.execute-api.us-west-2.amazonaws.com/prod',
+            userPoolId: 'us-west-2_uRIG9o3CV',
+            clientId: '3t4u21rmq73robcnp1ltutpc67'
+        };
+
+        let isAuthenticated = false;
+        let authToken = null;
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let isRecording = false;
+
+        // Simulación de autenticación (en producción usar AWS Cognito SDK)
+        function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            if (!email || !password) {
+                showError('Por favor ingresa email y contraseña');
+                return;
+            }
+
+            // Simulación de login exitoso
+            isAuthenticated = true;
+            authToken = 'simulated-jwt-token';
+            
+            document.getElementById('authForm').style.display = 'none';
+            document.getElementById('authStatus').innerHTML = `✅ Conectado como: ${email}`;
+            document.getElementById('chatContainer').style.display = 'flex';
+            
+            showMessage('Sistema', 'Autenticación exitosa. ¡Puedes comenzar a chatear!', 'bot');
+        }
+
+        function register() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            if (!email || !password) {
+                showError('Por favor ingresa email y contraseña');
+                return;
+            }
+
+            // Simulación de registro exitoso
+            showMessage('Sistema', 'Registro simulado exitoso. Ahora puedes iniciar sesión.', 'bot');
+        }
+
+        function sendMessage() {
+            if (!isAuthenticated) {
+                showError('Debes iniciar sesión primero');
+                return;
+            }
+
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+
+            if (!message) return;
+
+            showMessage('Tú', message, 'user');
+            input.value = '';
+
+            // Mostrar indicador de carga
+            showMessage('Bot', 'Escribiendo...', 'bot loading');
+
+            // Simular llamada a API
+            setTimeout(() => {
+                callBotAPI(message);
+            }, 1000);
+        }
+
+        async function callBotAPI(message, audioData = null) {
+            try {
+                const payload = {
+                    message: message,
+                    user_email: document.getElementById('email').value,
+                    audio_data: audioData
+                };
+
+                // En producción, hacer llamada real a API Gateway
+                // const response = await fetch(`${CONFIG.apiEndpoint}/chat`, {
+                //     method: 'POST',
+                //     headers: {
+                //         'Content-Type': 'application/json',
+                //         'Authorization': `Bearer ${authToken}`
+                //     },
+                //     body: JSON.stringify(payload)
+                // });
+
+                // Simulación de respuesta del bot
+                const simulatedResponse = {
+                    respuesta: "¡Perfecto! Te ayudo a encontrar electrodomésticos. Basándome en tu consulta, te recomiendo estos productos:",
+                    productos: [
+                        {
+                            nombre: "Refrigerador Samsung RF28T5001SR",
+                            costo: 1299.99,
+                            url_producto: "https://tienda.com/productos/refrigerador-samsung-rf28t5001sr",
+                            descripcion: "Refrigerador de 28 pies cúbicos con tecnología Twin Cooling Plus"
+                        },
+                        {
+                            nombre: "Lavadora LG WM3900HWA",
+                            costo: 899.99,
+                            url_producto: "https://tienda.com/productos/lavadora-lg-wm3900hwa",
+                            descripcion: "Lavadora de carga frontal 4.5 cu ft con TurboWash"
+                        }
+                    ],
+                    audio_url: audioData ? "https://ejemplo.com/audio.mp3" : null
+                };
+
+                // Remover mensaje de carga
+                removeLoadingMessage();
+
+                // Mostrar respuesta
+                showBotResponse(simulatedResponse);
+
+            } catch (error) {
+                removeLoadingMessage();
+                showError('Error conectando con el bot: ' + error.message);
+            }
+        }
+
+        function showMessage(sender, content, type) {
+            const messages = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            
+            if (type === 'bot loading') {
+                messageDiv.innerHTML = `<strong>${sender}:</strong> <span class="loading">${content}</span>`;
+                messageDiv.id = 'loadingMessage';
+            } else {
+                messageDiv.innerHTML = `<strong>${sender}:</strong> ${content}`;
+            }
+            
+            messages.appendChild(messageDiv);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        function showBotResponse(response) {
+            let content = response.respuesta;
+
+            if (response.productos && response.productos.length > 0) {
+                content += '<div class="products">';
+                response.productos.forEach(producto => {
+                    content += `
+                        <div class="product">
+                            <h4>${producto.nombre}</h4>
+                            <p>${producto.descripcion}</p>
+                            <p class="price">$${producto.costo}</p>
+                            <a href="${producto.url_producto}" target="_blank">Ver producto →</a>
+                        </div>
+                    `;
+                });
+                content += '</div>';
+            }
+
+            if (response.audio_url) {
+                content += `<audio controls style="margin-top: 10px; width: 100%;">
+                    <source src="${response.audio_url}" type="audio/mpeg">
+                    Tu navegador no soporta audio.
+                </audio>`;
+            }
+
+            showMessage('Bot', content, 'bot');
+        }
+
+        function removeLoadingMessage() {
+            const loadingMsg = document.getElementById('loadingMessage');
+            if (loadingMsg) {
+                loadingMsg.remove();
+            }
+        }
+
+        function showError(message) {
+            const messages = document.getElementById('messages');
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error';
+            errorDiv.textContent = message;
+            messages.appendChild(errorDiv);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        // Funciones de grabación de audio
+        async function startRecording() {
+            if (!isAuthenticated) {
+                showError('Debes iniciar sesión primero');
+                return;
+            }
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+
+                mediaRecorder.ondataavailable = (event) => {
+                    audioChunks.push(event.data);
+                };
+
+                mediaRecorder.onstop = () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        const base64Audio = reader.result.split(',')[1];
+                        showMessage('Tú', '🎤 Mensaje de voz enviado', 'user');
+                        showMessage('Bot', 'Procesando audio...', 'bot loading');
+                        setTimeout(() => {
+                            callBotAPI('', base64Audio);
+                        }, 1500);
+                    };
+                    reader.readAsDataURL(audioBlob);
+                };
+
+                mediaRecorder.start();
+                isRecording = true;
+                document.getElementById('audioBtn').classList.add('recording');
+                document.getElementById('audioBtn').textContent = '🔴';
+
+            } catch (error) {
+                showError('Error accediendo al micrófono: ' + error.message);
+            }
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && isRecording) {
+                mediaRecorder.stop();
+                isRecording = false;
+                document.getElementById('audioBtn').classList.remove('recording');
+                document.getElementById('audioBtn').textContent = '🎤';
+                
+                // Detener todas las pistas de audio
+                mediaRecorder.stream.getTracks().forEach(track => track.stop());
+            }
+        }
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Bot de Compras iniciado');
+            console.log('Configuración:', CONFIG);
+        });
+    </script>
+</body>
+</html>
